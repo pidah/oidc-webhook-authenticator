@@ -278,11 +278,11 @@ minikube start \
   --extra-config=apiserver.authentication-token-webhook-cache-ttl=10s
 ```
 
-To allow easy authentication via [kubelogin](https://github.com/int128/kubelogin) the minikube IP is added as `control-plane.minikube.internal` in `/etc/hosts`
+To allow easy authentication via [kubelogin](https://github.com/int128/kubelogin) the localhost ip is added as `control-plane.minikube.internal` in `/etc/hosts`
 
 ```shell
 sudo sed -ie '/control-plane.minikube.internal/d' /etc/hosts
-sudo echo "$(minikube ip) control-plane.minikube.internal" >> /etc/hosts
+sudo bash -c "echo 127.0.0.1 control-plane.minikube.internal >> /etc/hosts"
 ```
 
 Add the CRD:
@@ -303,6 +303,16 @@ Deploy Dex and the oidc webhook authenticator:
 ```shell
 kubectl apply -f config/samples/deployment.yaml
 ```
+In a seperate terminal window, run the following to forward Dex traffic to your
+localhost:
+
+```shell
+kubectl port-forward svc/dex  31133:5556 -n oidc-webhook-authenticator-system
+```
+TODO: remove readlink
+For mac users, install greadlink:
+```shell
+brew install coreutils
 
 Add an additional user with Dex authentication to the kubeconfig and use it as current context
 
@@ -311,7 +321,7 @@ kubectl config set-credentials minikube-dex \
 --exec-command=kubectl \
 --exec-arg=oidc-login \
 --exec-arg=get-token \
---exec-arg=--certificate-authority=$(readlink -f cfssl/ca.crt) \
+--exec-arg=--certificate-authority=$(greadlink -f cfssl/ca.crt) \
 --exec-arg=--oidc-issuer-url=https://control-plane.minikube.internal:31133 \
 --exec-arg=--oidc-client-id=oidc-webhook \
 --exec-arg=--oidc-client-secret=ZXhhbXBsZS1hcHAtc2VjcmV0 \
